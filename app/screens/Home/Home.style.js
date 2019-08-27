@@ -16,6 +16,27 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontWeight: 'bold',
     fontSize: 16
+  },
+  textInput: {
+    color: '#BCC6C9',
+    fontWeight: 'bold',
+    fontSize: 14,
+    backgroundColor: '#F3F3F3',
+    paddingHorizontal: 10
+  },
+  containerItem: {
+    backgroundColor: '#CDD8DC',
+    padding: 10,
+    marginBottom: 3,
+    flexDirection: 'row'
+  },
+  textName: {
+    color: '#616E75',
+    marginLeft: 10
+  },
+  iconListRight: {
+    flex: 1,
+    alignItems: 'flex-end'
   }
 });
 
