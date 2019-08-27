@@ -37,6 +37,14 @@ const styles = StyleSheet.create({
   iconListRight: {
     flex: 1,
     alignItems: 'flex-end'
+  },
+  containerLoading: {
+    flex: 1,
+    alignItems: 'center',
+    marginTop: 20
+  },
+  containerEmpty: {
+    alignItems: 'center'
   }
 });
 
