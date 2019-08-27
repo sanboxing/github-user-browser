@@ -1,64 +1,154 @@
-import React, { Component, Fragment } from 'react';
-import { View, FlatList, Text, TouchableOpacity, TextInput } from 'react-native';
+import React, { Component } from 'react';
+import {
+  View,
+  FlatList,
+  Text,
+  TouchableOpacity,
+  TextInput,
+  ActivityIndicator,
+  Alert
+} from 'react-native';
 import PropTypes from 'prop-types';
 import Icon from 'react-native-vector-icons/Ionicons';
+import _, { get } from 'lodash';
 
 import styles from './Home.style';
+import axios from '../../utils/axios';
 
 class Home extends Component {
-  state = {
-    searchInput: '',
-    data: [
-      {
-        login: 'minzarddillah',
-        id: 39266818,
-        node_id: 'MDQ6VXNlcjM5MjY2ODE4',
-        avatar_url: 'https://avatars2.githubusercontent.com/u/39266818?v=4',
-        gravatar_id: '',
-        url: 'https://api.github.com/users/minzarddillah',
-        html_url: 'https://github.com/minzarddillah',
-        followers_url: 'https://api.github.com/users/minzarddillah/followers',
-        following_url: 'https://api.github.com/users/minzarddillah/following{/other_user}',
-        gists_url: 'https://api.github.com/users/minzarddillah/gists{/gist_id}',
-        starred_url: 'https://api.github.com/users/minzarddillah/starred{/owner}{/repo}',
-        subscriptions_url: 'https://api.github.com/users/minzarddillah/subscriptions',
-        organizations_url: 'https://api.github.com/users/minzarddillah/orgs',
-        repos_url: 'https://api.github.com/users/minzarddillah/repos',
-        events_url: 'https://api.github.com/users/minzarddillah/events{/privacy}',
-        received_events_url: 'https://api.github.com/users/minzarddillah/received_events',
-        type: 'User',
-        site_admin: false,
-        score: 93.07312
-      },
-      {
-        login: 'Minzard',
-        id: 35060245,
-        node_id: 'MDQ6VXNlcjM1MDYwMjQ1',
-        avatar_url: 'https://avatars3.githubusercontent.com/u/35060245?v=4',
-        gravatar_id: '',
-        url: 'https://api.github.com/users/Minzard',
-        html_url: 'https://github.com/Minzard',
-        followers_url: 'https://api.github.com/users/Minzard/followers',
-        following_url: 'https://api.github.com/users/Minzard/following{/other_user}',
-        gists_url: 'https://api.github.com/users/Minzard/gists{/gist_id}',
-        starred_url: 'https://api.github.com/users/Minzard/starred{/owner}{/repo}',
-        subscriptions_url: 'https://api.github.com/users/Minzard/subscriptions',
-        organizations_url: 'https://api.github.com/users/Minzard/orgs',
-        repos_url: 'https://api.github.com/users/Minzard/repos',
-        events_url: 'https://api.github.com/users/Minzard/events{/privacy}',
-        received_events_url: 'https://api.github.com/users/Minzard/received_events',
-        type: 'User',
-        site_admin: false,
-        score: 68.87966
+  static navigationOptions = ({ navigation }) => {
+    return {
+      header: () => {
+        const searchInput = navigation.getParam('searchInput', '');
+        const onTypeText = navigation.getParam('onTypeText', () => {});
+
+        return (
+          <View>
+            <View style={styles.containerHeader}>
+              <Text style={styles.textHeader}>Github Users</Text>
+              <TouchableOpacity>
+                <Icon name="md-menu" size={30} color="#FFF" />
+              </TouchableOpacity>
+            </View>
+            <View>
+              <TextInput
+                placeholder="Search by username"
+                style={styles.textInput}
+                onChangeText={onTypeText}
+                value={searchInput}
+                selectionColor="#BCC6C9"
+                autoFocus
+              />
+            </View>
+          </View>
+        );
       }
-    ]
+    };
   };
 
-  onChangeSearchInput = (value) => {
-    if (value === ' ') return;
-    this.setState({
-      searchInput: value
+  constructor(props) {
+    super(props);
+    this.state = {
+      searchInput: '',
+      data: [],
+      loading: false,
+      totalCount: 0,
+      page: 1
+    };
+    this.onFetchDebounced = _.debounce(this.requestSearch, 1000);
+  }
+
+  componentDidMount() {
+    this.props.navigation.setParams({
+      onTypeText: this.onTypeText,
+      searchInput: this.state.searchInput
     });
+  }
+
+  onEndReached = async () => {
+    const {
+      data,
+      totalCount,
+      loading,
+      searchInput,
+      page
+    } = this.state;
+
+    if (!loading && data.length < totalCount) {
+      const url = `/search/users?q=${searchInput}&per_page=15&page=${page}`;
+
+      this.setState({
+        loading: true
+      });
+
+      try {
+        const { data: dataResponse } = await axios.get(url);
+        this.setState({
+          data: data.concat(dataResponse.items || []),
+          totalCount: dataResponse.total_count,
+          loading: false,
+          page: page + 1
+        });
+      } catch (error) {
+        console.log(error.response);
+        Alert.alert('Error when get data');
+      }
+    }
+  }
+
+  onTypeText = (value = '') => {
+    const { navigation } = this.props;
+    const { loading } = this.state;
+    this.setState({
+      searchInput: value.trim()
+    });
+
+    navigation.setParams({ searchInput: value.trim() });
+
+    this.setState({
+      data: [],
+      totalCount: 0
+    });
+
+
+    if (value.trim().length < 3) this.setState({ loading: false });
+    else if (!loading && value.trim().length >= 3) {
+      this.setState({
+        loading: true
+      }, () => {
+        this.onFetchDebounced();
+      });
+    }
+  }
+
+  requestSearch = async () => {
+    const { searchInput } = this.state;
+    const url = `/search/users?q=${searchInput}&per_page=15&page=1`;
+    if (searchInput.length === 0) {
+      return this.setState({
+        data: [],
+        totalCount: 0,
+        loading: false
+      });
+    }
+
+    try {
+      const { data } = await axios.get(url);
+
+      return this.setState({
+        data: data.items,
+        totalCount: data.total_count,
+        loading: false,
+        page: 2
+      });
+    } catch (error) {
+      Alert.alert(get(error, 'response.data.message', 'unexpected error'));
+      return this.setState({
+        data: [],
+        totalCount: 0,
+        loading: false
+      });
+    }
   }
 
   goToDetail = data => () => {
@@ -66,30 +156,6 @@ class Home extends Component {
   }
 
   _keyExtractor = (item, index) => index.toString();
-
-  _renderHeader = () => {
-    const { searchInput } = this.state;
-
-    return (
-      <Fragment>
-        <View style={styles.containerHeader}>
-          <Text style={styles.textHeader}>Github Users</Text>
-          <TouchableOpacity>
-            <Icon name="md-menu" size={30} color="#FFF" />
-          </TouchableOpacity>
-        </View>
-        <View>
-          <TextInput
-            placeholder="Search by username"
-            style={styles.textInput}
-            onChangeText={this.onChangeSearchInput}
-            value={searchInput}
-            selectionColor="#BCC6C9"
-          />
-        </View>
-      </Fragment>
-    );
-  }
 
   _renderItem = ({ item }) => {
     return (
@@ -103,7 +169,33 @@ class Home extends Component {
     );
   }
 
-  __renderListEmptyComponent = () => {
+  _renderListEmptyComponent = () => {
+    const { loading, searchInput } = this.state;
+    if (loading) return <View />;
+    else if (searchInput.length >= 3) {
+      return (
+        <View style={styles.containerEmpty}>
+          <Text>Sorry, we cant find your query</Text>
+        </View>
+      );
+    }
+
+    return (
+      <View style={styles.containerEmpty}>
+        <Text>Please input text for search Github user</Text>
+      </View>
+    );
+  }
+
+  _renderFooter = () => {
+    const { loading } = this.state;
+    if (loading) {
+      return (
+        <View style={styles.containerLoading}>
+          <ActivityIndicator size="large" />
+        </View>
+      );
+    }
     return <View />;
   }
 
@@ -114,9 +206,11 @@ class Home extends Component {
         data={data}
         keyExtractor={this._keyExtractor}
         renderItem={this._renderItem}
-        ListHeaderComponent={this._renderHeader}
-        // extraData={this.props}
+        extraData={this.state}
         ListEmptyComponent={this._renderListEmptyComponent}
+        ListFooterComponent={this._renderFooter}
+        onEndReachedThreshold={0.2}
+        onEndReached={this.onEndReached}
       />
     );
   }
@@ -126,6 +220,8 @@ export default Home;
 
 Home.propTypes = {
   navigation: PropTypes.shape({
-    navigate: PropTypes.func
+    navigate: PropTypes.func,
+    setParams: PropTypes.func,
+    getParam: PropTypes.func
   }).isRequired
 };

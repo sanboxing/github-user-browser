@@ -47,9 +47,6 @@ class DetailProfile extends Component {
       ];
       const [{ data }, { data: organizations }] = await Promise.all(fetch);
 
-      console.log(data);
-      console.log(organizations);
-
       this.setState({
         data,
         loading: false,

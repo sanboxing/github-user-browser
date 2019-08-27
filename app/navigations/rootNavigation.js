@@ -8,10 +8,7 @@ import DetailProfile from '../screens/DetailProfile/DetailProfile.screen';
 
 const HomeStack = createStackNavigator({
   Home: {
-    screen: Home,
-    navigationOptions: ({ navigation }) => ({
-      header: null
-    })
+    screen: Home
   },
   DetailProfile: {
     screen: DetailProfile
